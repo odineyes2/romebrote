@@ -1,9 +1,9 @@
 ---
-name: test-notion-upload
-description: "[임시] notion-uploader 에이전트 단독 테스트용. posts/ 폴더의 특정 파일을 Notion에 업로드한다. $ARGUMENTS에 slug를 넘기면 해당 파일을, 없으면 camera-terms-ai-image-prompt-tips를 기본값으로 사용한다."
+name: notion-upload
+description: "posts/ 폴더의 특정 파일을 Notion Content Pipeline 데이터베이스에 업로드한다. $ARGUMENTS에 slug를 넘기면 해당 파일을, 없으면 camera-terms-ai-image-prompt-tips를 기본값으로 사용한다."
 ---
 
-# [임시] Notion 업로드 테스트
+# Notion 업로드
 
 ## 작업 순서
 
