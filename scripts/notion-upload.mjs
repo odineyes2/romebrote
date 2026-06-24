@@ -53,6 +53,39 @@ function parseInline(text) {
   return parts.length ? parts : [{ type: 'text', text: { content: text } }];
 }
 
+// --- 마크다운 표 → Notion table 블록 ---
+function parseTableRow(line) {
+  return line.split('|').slice(1, -1).map(cell => cell.trim());
+}
+
+function isTableSeparator(cells) {
+  return cells.every(cell => /^:?-+:?$/.test(cell));
+}
+
+function buildNotionTable(tableLines) {
+  const rows = tableLines.map(parseTableRow);
+  const hasSeparator = rows.length > 1 && isTableSeparator(rows[1]);
+  const dataRows = hasSeparator
+    ? [rows[0], ...rows.slice(2)]
+    : rows;
+
+  if (dataRows.length === 0) return null;
+  const tableWidth = dataRows[0].length;
+
+  return {
+    type: 'table',
+    table: {
+      table_width: tableWidth,
+      has_column_header: hasSeparator,
+      has_row_header: false,
+      children: dataRows.map(row => ({
+        type: 'table_row',
+        table_row: { cells: row.map(cell => parseInline(cell)) },
+      })),
+    },
+  };
+}
+
 // --- 마크다운 바디 → Notion 블록 배열 ---
 function markdownToBlocks(md) {
   const blocks = [];
@@ -91,6 +124,18 @@ function markdownToBlocks(md) {
       i++; continue;
     }
 
+    // 표: 연속된 | 행을 묶어서 Notion table 블록으로 변환
+    if (line.startsWith('|')) {
+      const tableLines = [];
+      while (i < lines.length && lines[i].startsWith('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      const tableBlock = buildNotionTable(tableLines);
+      if (tableBlock) blocks.push(tableBlock);
+      continue;
+    }
+
     // 제목
     if (line.startsWith('# ')) {
       blocks.push({ type: 'heading_1', heading_1: { rich_text: parseInline(line.slice(2)) } });
@@ -102,10 +147,6 @@ function markdownToBlocks(md) {
     // 구분선
     else if (line.match(/^---+$/)) {
       blocks.push({ type: 'divider', divider: {} });
-    }
-    // 표 (raw text로 fallback)
-    else if (line.startsWith('|')) {
-      blocks.push({ type: 'paragraph', paragraph: { rich_text: [{ type: 'text', text: { content: line } }] } });
     }
     // 불릿 리스트
     else if (line.match(/^[-*] /)) {
